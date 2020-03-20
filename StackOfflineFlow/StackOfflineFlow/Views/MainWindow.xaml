@@ -12,6 +12,38 @@
         <vm:MainWindowViewModel/>
     </Design.DataContext>
 
-    <TextBlock Text="{Binding Greeting}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-
+  <DockPanel>
+    <Menu DockPanel.Dock="Top">
+      <MenuItem Header="_File">
+        <MenuItem Header="Select StackOverflow Data Folder" Command="{Binding OpenFile}"/>
+        <Separator/>
+        <MenuItem Header="_Exit" Command="{Binding Exit}"/>
+      </MenuItem>
+    </Menu>
+    <StackPanel>
+      <TextBlock Text="{Binding BulkDataPath}"></TextBlock>
+      <TextBlock Text="{Binding BadgesPath}"></TextBlock>
+      <TextBlock Text="{Binding CommentsPath}"></TextBlock>
+      <TextBlock Text="{Binding PostHistoryPath}"></TextBlock>
+      <TextBlock Text="{Binding PostLinksPath}"></TextBlock>
+      <TextBlock Text="{Binding PostsPath}"></TextBlock>
+      <TextBlock Text="{Binding TagsPath}"></TextBlock>
+      <TextBlock Text="{Binding UsersPath}"></TextBlock>
+      <TextBlock Text="{Binding VotesPath}"></TextBlock>
+      <TextBox Text="{Binding SearchText}"></TextBox>
+      <Button Command="{Binding Search}">Search</Button>
+    </StackPanel>
+    <ScrollViewer HorizontalScrollBarVisibility="Auto">
+      <ItemsControl Items="{Binding SearchResults}">
+        <ItemsControl.ItemTemplate>
+          <DataTemplate>
+            <StackPanel>
+              <TextBlock Text="{Binding}"></TextBlock>
+              <Separator></Separator>
+            </StackPanel>
+          </DataTemplate>
+        </ItemsControl.ItemTemplate>
+      </ItemsControl>
+    </ScrollViewer>
+  </DockPanel>
 </Window>
