@@ -3,7 +3,7 @@ using StackOfflineFlow.Test.Helpers;
 using System;
 using Xunit;
 
-namespace StackOfflineFlow.Test
+namespace StackOfflineFlow.Test.System
 {
     public class StackOverflowBulkDataServiceTests
     {
