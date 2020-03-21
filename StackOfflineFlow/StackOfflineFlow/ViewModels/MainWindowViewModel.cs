@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -27,13 +28,20 @@ namespace StackOfflineFlow.ViewModels
         public string SearchText { get; set; }
         public ObservableCollection<string> SearchResults { get; set; } = new ObservableCollection<string>();
 
+        private StackOverflowBulkDataService _BulkDataService;
+
         public MainWindowViewModel()
         {
             var appSettings = AutosaveService.GetAppSettings();
             BulkDataPath = "StackOverflow bulk data path: "+ appSettings.StackOverflowDataFolderPath;
             if(!String.IsNullOrEmpty(appSettings.StackOverflowDataFolderPath))
             {
+                if(!Directory.Exists(appSettings.StackOverflowDataFolderPath))
+                {
+                    return;
+                }
                 var paths = BulkDataFileService.GetBulkDataFilePathsFromDirectory(appSettings.StackOverflowDataFolderPath);
+                _BulkDataService = new StackOverflowBulkDataService(paths);
                 BadgesPath = paths.BadgesPath;
                 CommentsPath = paths.CommentsPath;
                 PostHistoryPath = paths.PostHistoryPath;
@@ -67,37 +75,21 @@ namespace StackOfflineFlow.ViewModels
         {
             return Task.Factory.StartNew(async () =>
             {
+                
                 var reader = XmlReader.Create(CommentsPath);
                 var isInRow = false;
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
                     SearchResults.Clear();
                 });
-                while (reader.MoveToNextAttribute() || reader.Read())
+
+                _BulkDataService.FindMatchesInPosts(SearchText, async x =>
                 {
-                    if (reader.NodeType == XmlNodeType.Element && String.Equals(reader.Name, "row"))
+                    await Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        isInRow = true;
-                    }
-                    if (reader.NodeType == XmlNodeType.Attribute && isInRow)
-                    {
-                        if (reader.Name == "Text" && reader.Value.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
-                        {
-                            await Dispatcher.UIThread.InvokeAsync(() =>
-                            {
-                                SearchResults.Add(reader.Value);
-                            });
-                            if (SearchResults.Count >= 100)
-                            {
-                                break;
-                            }
-                        }
-                    }
-                    if (reader.NodeType != XmlNodeType.Element && reader.NodeType != XmlNodeType.Attribute)
-                    {
-                        isInRow = false;
-                    }
-                }
+                        SearchResults.Add(x);
+                    });
+                }, 10);                
             });            
         }
 

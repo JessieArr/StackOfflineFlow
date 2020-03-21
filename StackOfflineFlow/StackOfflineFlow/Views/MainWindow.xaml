@@ -23,14 +23,6 @@
     </Menu>
     <StackPanel>
       <TextBlock Text="{Binding BulkDataPath}"></TextBlock>
-      <TextBlock Text="{Binding BadgesPath}"></TextBlock>
-      <TextBlock Text="{Binding CommentsPath}"></TextBlock>
-      <TextBlock Text="{Binding PostHistoryPath}"></TextBlock>
-      <TextBlock Text="{Binding PostLinksPath}"></TextBlock>
-      <TextBlock Text="{Binding PostsPath}"></TextBlock>
-      <TextBlock Text="{Binding TagsPath}"></TextBlock>
-      <TextBlock Text="{Binding UsersPath}"></TextBlock>
-      <TextBlock Text="{Binding VotesPath}"></TextBlock>
       <TextBox Text="{Binding SearchText}"></TextBox>
       <Button Command="{Binding Search}">Search</Button>
     </StackPanel>
@@ -39,7 +31,7 @@
         <ItemsControl.ItemTemplate>
           <DataTemplate>
             <StackPanel>
-              <TextBlock Text="{Binding}"></TextBlock>
+              <TextBox Text="{Binding}"></TextBox>
               <Separator></Separator>
             </StackPanel>
           </DataTemplate>
