@@ -16,6 +16,7 @@
     <Menu DockPanel.Dock="Top">
       <MenuItem Header="_File">
         <MenuItem Header="Select StackOverflow Data Folder" Command="{Binding OpenFile}"/>
+        <MenuItem Header="Where Do I Get StackOverflow's Data?" Command="{Binding WhereIGetData}"/>
         <Separator/>
         <MenuItem Header="_Exit" Command="{Binding Exit}"/>
       </MenuItem>

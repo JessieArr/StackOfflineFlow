@@ -1,9 +1,12 @@
 ﻿using Avalonia.Controls;
+using Avalonia.Threading;
 using StackOfflineFlow.Services;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading.Tasks;
 using System.Xml;
@@ -60,31 +63,70 @@ namespace StackOfflineFlow.ViewModels
             Environment.Exit(0);
         }
 
-        public void Search()
+        public Task Search()
         {
-            var reader = XmlReader.Create(CommentsPath);
-            var isInRow = false;
-            SearchResults.Clear();
-            while (reader.MoveToNextAttribute() || reader.Read())
+            return Task.Factory.StartNew(async () =>
             {
-                if (reader.NodeType == XmlNodeType.Element && String.Equals(reader.Name, "row"))
+                var reader = XmlReader.Create(CommentsPath);
+                var isInRow = false;
+                await Dispatcher.UIThread.InvokeAsync(() =>
                 {
-                    isInRow = true;
-                }
-                if (reader.NodeType == XmlNodeType.Attribute && isInRow)
+                    SearchResults.Clear();
+                });
+                while (reader.MoveToNextAttribute() || reader.Read())
                 {
-                    if (reader.Name == "Text" && reader.Value.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
+                    if (reader.NodeType == XmlNodeType.Element && String.Equals(reader.Name, "row"))
                     {
-                        SearchResults.Add(reader.Value);
-                        if (SearchResults.Count >= 100)
+                        isInRow = true;
+                    }
+                    if (reader.NodeType == XmlNodeType.Attribute && isInRow)
+                    {
+                        if (reader.Name == "Text" && reader.Value.Contains(SearchText, StringComparison.OrdinalIgnoreCase))
                         {
-                            break;
+                            await Dispatcher.UIThread.InvokeAsync(() =>
+                            {
+                                SearchResults.Add(reader.Value);
+                            });
+                            if (SearchResults.Count >= 100)
+                            {
+                                break;
+                            }
                         }
                     }
+                    if (reader.NodeType != XmlNodeType.Element && reader.NodeType != XmlNodeType.Attribute)
+                    {
+                        isInRow = false;
+                    }
                 }
-                if (reader.NodeType != XmlNodeType.Element && reader.NodeType != XmlNodeType.Attribute)
+            });            
+        }
+
+        public void WhereIGetData()
+        {
+            var url = "https://archive.org/download/stackexchange";
+            try
+            {
+                Process.Start(url);
+            }
+            catch
+            {
+                // hack because of this: https://github.com/dotnet/corefx/issues/10361
+                if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 {
-                    isInRow = false;
+                    url = url.Replace("&", "^&");
+                    Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+                {
+                    Process.Start("xdg-open", url);
+                }
+                else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+                {
+                    Process.Start("open", url);
+                }
+                else
+                {
+                    throw;
                 }
             }
         }
