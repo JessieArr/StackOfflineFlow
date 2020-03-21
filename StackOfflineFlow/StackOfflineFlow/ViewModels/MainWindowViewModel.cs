@@ -1,5 +1,6 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Threading;
+using ReactiveUI;
 using StackOfflineFlow.Services;
 using System;
 using System.Collections.Generic;
@@ -26,6 +27,13 @@ namespace StackOfflineFlow.ViewModels
         public string UsersPath { get; set; }
         public string VotesPath { get; set; }
         public string SearchText { get; set; }
+
+        private string searchStatus;
+        public string SearchStatus
+        {
+            get => searchStatus;
+            set => this.RaiseAndSetIfChanged(ref searchStatus, value);
+        }
         public ObservableCollection<string> SearchResults { get; set; } = new ObservableCollection<string>();
 
         private StackOverflowBulkDataService _BulkDataService;
@@ -73,6 +81,7 @@ namespace StackOfflineFlow.ViewModels
 
         public Task Search()
         {
+            SearchStatus = "Searching...";
             return Task.Factory.StartNew(async () =>
             {
                 
@@ -89,7 +98,12 @@ namespace StackOfflineFlow.ViewModels
                     {
                         SearchResults.Add(x);
                     });
-                }, 10);                
+                }, 10);
+
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    SearchStatus = $"Search complete - {SearchResults.Count} results found.";
+                });
             });            
         }
 

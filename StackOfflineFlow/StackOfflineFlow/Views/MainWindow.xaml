@@ -25,6 +25,7 @@
       <TextBlock Text="{Binding BulkDataPath}"></TextBlock>
       <TextBox Text="{Binding SearchText}"></TextBox>
       <Button Command="{Binding Search}">Search</Button>
+      <TextBlock Text="{Binding SearchStatus}"></TextBlock>
     </StackPanel>
     <ScrollViewer HorizontalScrollBarVisibility="Auto">
       <ItemsControl Items="{Binding SearchResults}">
