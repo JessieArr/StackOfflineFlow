@@ -350,3 +350,4 @@ MigrationBackup/
 
 *.ncrunchsolution
 StackOfflineFlow/StackOfflineFlow.Test/BulkDataFiles.json
+*.ncrunchproject
