@@ -1,8 +1,10 @@
 ﻿using StackOfflineFlow.Models;
+using StackOfflineFlow.Models.Index;
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+using System.Threading;
 using System.Xml;
 
 namespace StackOfflineFlow.Services
@@ -10,6 +12,7 @@ namespace StackOfflineFlow.Services
     public class StackOverflowBulkDataService
     {
         private BulkDataFiles _BulkDataFiles;
+        private int _searchUpdateInterval = 1000;
 
         public StackOverflowBulkDataService(BulkDataFiles bulkDataFiles)
         {
@@ -47,14 +50,24 @@ namespace StackOfflineFlow.Services
             return resultList;
         }
 
-        public List<string> FindMatchesInPosts(string searchText, Action<string> emitResult, int limit = 100)
+        public List<string> FindMatchesInPosts(string searchText, Action<SearchResult<string>> emitResult, 
+            CancellationToken cancellationToken)
         {
             var fileStream = new FileStream(_BulkDataFiles.PostsPath, FileMode.Open, FileAccess.Read);
             var watcher = new StreamWatcher(fileStream);
             var reader = XmlReader.Create(watcher);
             var resultList = new List<string>();
+            var recordsSearchedCount = 0;
             while (reader.ReadToFollowing("row"))
             {
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    var result = new SearchResult<string>();
+                    result.RecordsSearchedCount = recordsSearchedCount;
+                    result.UpdateStatus = SearchUpdateStatusEnum.Cancelled;
+                    emitResult(result);
+                    return resultList;
+                }
                 if(fileStream.Position < 32000)
                 {
                     continue;
@@ -64,16 +77,29 @@ namespace StackOfflineFlow.Services
                 {
                     rowAttributes.Add(reader.Name, reader.Value);
                 }
-                if (rowAttributes.ContainsKey("Body") && rowAttributes["Body"].Contains(""))
+                recordsSearchedCount++;
+                if (rowAttributes.ContainsKey("Body") && rowAttributes["Body"].Contains(searchText))
                 {
                     resultList.Add(rowAttributes["Body"]);
-                    emitResult(rowAttributes["Body"]);
-                    if(resultList.Count >= limit)
-                    {
-                        return resultList;
-                    }
+                    var result = new SearchResult<string>();
+                    result.RecordsSearchedCount = recordsSearchedCount;
+                    result.Result = rowAttributes["Body"];
+                    result.UpdateStatus = SearchUpdateStatusEnum.FoundResult;
+                    emitResult(result);
+                }
+                if(recordsSearchedCount % _searchUpdateInterval == 0)
+                {
+                    var result = new SearchResult<string>();
+                    result.RecordsSearchedCount = recordsSearchedCount;
+                    result.UpdateStatus = SearchUpdateStatusEnum.Searching;
+                    emitResult(result);
                 }
             }
+            var completeResult = new SearchResult<string>();
+            completeResult.RecordsSearchedCount = recordsSearchedCount;
+            completeResult.UpdateStatus = SearchUpdateStatusEnum.Complete;
+            emitResult(completeResult);
+
             return resultList;
         }
 
@@ -114,24 +140,25 @@ namespace StackOfflineFlow.Services
             return null;
         }
 
-        public Dictionary<int, int> GetAllElementPositionsByID()
+        public PostsIndex GeneratePostsIndex()
         {
             var fileStream = new FileStream(_BulkDataFiles.PostsPath, FileMode.Open, FileAccess.Read);
             var reader = XmlReader.Create(fileStream);
-            var results = new Dictionary<int, int>();
+            var result = new PostsIndex();
             while (reader.ReadToFollowing("row"))
             {
+                result.TotalRecordCount++;
                 while (reader.MoveToNextAttribute())
                 {
                     if(reader.Name == "Id")
                     {
                         var position = (int)fileStream.Position / 8192;
-                        results.Add(Int32.Parse(reader.Value), position);
+                        result.PostIDPositionsInXML.Add(Int32.Parse(reader.Value), position);
                         continue;
                     }
                 }
             }
-            return results;
+            return result;
         }
     }
 }

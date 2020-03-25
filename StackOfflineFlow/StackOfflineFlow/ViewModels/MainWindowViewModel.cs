@@ -1,6 +1,7 @@
 ﻿using Avalonia.Controls;
 using Avalonia.Threading;
 using ReactiveUI;
+using StackOfflineFlow.Models;
 using StackOfflineFlow.Services;
 using System;
 using System.Collections.Generic;
@@ -10,6 +11,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Xml;
 
@@ -79,31 +81,47 @@ namespace StackOfflineFlow.ViewModels
             Environment.Exit(0);
         }
 
+        private CancellationTokenSource _SearchCancellationTokenSource;
         public Task Search()
         {
             SearchStatus = "Searching...";
+            if(_SearchCancellationTokenSource != null)
+            {
+                _SearchCancellationTokenSource.Cancel();
+            }
+            _SearchCancellationTokenSource = new CancellationTokenSource();
+            SearchResults.Clear();
+            var resultCount = 0;
             return Task.Factory.StartNew(async () =>
             {
-                
-                var reader = XmlReader.Create(CommentsPath);
-                var isInRow = false;
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    SearchResults.Clear();
-                });
-
+                var stopwatch = Stopwatch.StartNew();
                 _BulkDataService.FindMatchesInPosts(SearchText, async x =>
                 {
                     await Dispatcher.UIThread.InvokeAsync(() =>
                     {
-                        SearchResults.Add(x);
+                        if(x.UpdateStatus == SearchUpdateStatusEnum.FoundResult)
+                        {
+                            resultCount++;
+                            if (SearchResults.Count < 100)
+                            {
+                                SearchResults.Add(x.Result);
+                            }
+                            SearchStatus = $"Searching... {resultCount} results found in {x.RecordsSearchedCount} posts searched. ({stopwatch.ElapsedMilliseconds}ms)";
+                        }
+                        if (x.UpdateStatus == SearchUpdateStatusEnum.Searching)
+                        {
+                            SearchStatus = $"Searching... {resultCount} results found in {x.RecordsSearchedCount} posts searched. ({stopwatch.ElapsedMilliseconds}ms)";
+                        }
+                        if (x.UpdateStatus == SearchUpdateStatusEnum.Complete)
+                        {
+                            SearchStatus = $"Search complete - {resultCount} results found in {x.RecordsSearchedCount} posts searched. ({stopwatch.ElapsedMilliseconds}ms)";
+                        }
+                        if (x.UpdateStatus == SearchUpdateStatusEnum.Cancelled)
+                        {
+                            SearchStatus = $"Search cancelled - {resultCount} results found in {x.RecordsSearchedCount} posts searched. ({stopwatch.ElapsedMilliseconds}ms)";
+                        }
                     });
-                }, 10);
-
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    SearchStatus = $"Search complete - {SearchResults.Count} results found.";
-                });
+                }, _SearchCancellationTokenSource.Token);
             });            
         }
 

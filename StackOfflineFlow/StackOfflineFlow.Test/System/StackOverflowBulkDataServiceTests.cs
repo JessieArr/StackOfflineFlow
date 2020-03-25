@@ -1,9 +1,11 @@
 using Newtonsoft.Json;
+using StackOfflineFlow.Models;
 using StackOfflineFlow.Services;
 using StackOfflineFlow.Test.Helpers;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading;
 using Xunit;
 
 namespace StackOfflineFlow.Test.System
@@ -38,7 +40,7 @@ namespace StackOfflineFlow.Test.System
         [Fact]
         public void FindMatchesInPosts_ReturnsResults()
         {
-            var results = SUT.FindMatchesInPosts("console", x => { }, 5);
+            var results = SUT.FindMatchesInPosts("console", x => { }, new CancellationToken());
             Assert.Equal(5, results.Count);
         }
 
@@ -49,8 +51,8 @@ namespace StackOfflineFlow.Test.System
 
             var results = SUT.FindMatchesInPosts("console", x =>
             {
-                emittedResults.Add(x);
-            }, 5);
+                emittedResults.Add(x.Result);
+            }, new CancellationToken());
             Assert.Equal(5, emittedResults.Count);
         }
 
@@ -73,7 +75,7 @@ namespace StackOfflineFlow.Test.System
         [Fact]
         public void GetAllElementPositionsByID_DoesNotThrow()
         {
-            var result1 = SUT.GetAllElementPositionsByID();
+            var result1 = SUT.GeneratePostsIndex();
             Assert.NotNull(result1);
             var serialized = JsonConvert.SerializeObject(result1);
             File.WriteAllText("index.json", serialized);
